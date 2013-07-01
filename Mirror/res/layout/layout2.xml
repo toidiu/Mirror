@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:baselineAligned="false"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#ff000000" 
+    >
+    
+    <!-- top frame -->
+    <FrameLayout
+	    android:id="@+id/top_light"
+	    android:layout_width="fill_parent"
+	    android:layout_height="80dp"
+	    android:layout_weight="1"
+    >
+		<ImageView
+		    android:id="@+id/top_light_img"
+		    android:src="@drawable/lightbulb_hor"
+		    android:layout_width="fill_parent"
+		    android:layout_height="match_parent"
+            android:scaleType="fitXY"
+		/>
+    </FrameLayout>
+  
+    <!-- mid frame -->
+    <RelativeLayout 
+        android:id="@+id/cam_frame"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_weight="6" >
+		
+        <FrameLayout 
+            android:id="@+id/left_light_img_frm"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_alignParentLeft="true" >
+            
+            <ImageView
+			    android:id="@+id/left_light_img"
+			    android:layout_width="match_parent"
+			    android:layout_height="fill_parent"
+				android:src="@drawable/lightbulb_ver"
+				android:scaleType="fitXY"
+			/>
+        </FrameLayout>
+        
+        <FrameLayout 
+            android:id="@+id/right_light_img_frm"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_alignParentRight="true" >
+                
+	        <ImageView
+	            android:id="@+id/right_light_img"
+                android:layout_width="match_parent"
+                android:layout_height="fill_parent"
+                android:src="@drawable/lightbulb_ver"
+                android:scaleType="fitXY"
+	        />
+        </FrameLayout>
+        
+	    <FrameLayout
+			android:id="@+id/camera_preview"
+	        android:layout_width="wrap_content"
+	        android:layout_height="fill_parent"
+	        android:layout_toRightOf="@id/left_light_img_frm"
+	        android:layout_toLeftOf="@id/right_light_img_frm" >
+		</FrameLayout>
+        
+    </RelativeLayout>
+
+	<!-- bot frame -->
+	<FrameLayout
+		android:id="@+id/bot_light"
+		android:layout_width="fill_parent"
+		android:layout_height="80dp"
+		android:layout_weight="1"
+	  >
+		<ImageView
+		    android:id="@+id/bot_light_img"
+		    android:src="@drawable/lightbulb_hor"
+		    android:layout_width="fill_parent"
+		    android:layout_height="match_parent"
+            android:scaleType="fitXY"
+		/>
+	</FrameLayout>
+
+  
+</LinearLayout>
