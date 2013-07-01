@@ -82,8 +82,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		main_gesture_listener();
 		
-		Prefs.app_launched(this);
-		
 //	    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
 	}
