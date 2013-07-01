@@ -43,7 +43,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private float old_scrn_brightness;
 	private MediaPlayer mp;
 	private int mp_position;
-	private Boolean main_is_restored;
 	private PointF start = new PointF();
 	private static final String TAG = "Touch";
 	private final int main_move_threshold = 70;
@@ -76,7 +75,6 @@ public class MainActivity extends Activity implements OnTouchListener{
     	 rLayout.setBackgroundDrawable(drawable);	
 		*/
 		g_cam_id = 100;
-		main_is_restored = false;
 		mode = NORMAL;
 		mode_change = NO_CHANGE;
 		
@@ -151,7 +149,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 //		main_is_restored = savedInstanceState.getBoolean("restored");
 	}
 	
-/*	@Override
+	@Override
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
         if (Integer.parseInt(android.os.Build.VERSION.SDK) < 5
                 && keyCode == KeyEvent.KEYCODE_BACK ) {
@@ -162,7 +160,7 @@ public class MainActivity extends Activity implements OnTouchListener{
         // back button was not pressed
         return super.onKeyDown(keyCode, event);
 	}
-*/
+
 	@Override
 	public boolean onTouch(View v, MotionEvent event) {
 		
@@ -190,7 +188,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 				mode_change = CHANGE;
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change) ) {
-mode_change = CHANGE;
+				g_cam.startPreview();
+				mode = NORMAL;
+				mode_change = CHANGE;
 			}
 			
 			// resume preview if move is up
