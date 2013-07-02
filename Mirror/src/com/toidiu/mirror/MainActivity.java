@@ -28,6 +28,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewManager;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -60,7 +61,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		super.onCreate(savedInstanceState);
 		//requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.layout2);
-
+//		setContentView(R.layout.arrow_down);
 		//ImageView image = (ImageView) findViewById(R.id.top_light);
 		
 		/*
@@ -79,8 +80,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode_change = NO_CHANGE;
 		
 		main_gesture_listener();
-		
-		Prefs.app_launched(this);
 		
 //	    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
@@ -151,10 +150,14 @@ public class MainActivity extends Activity implements OnTouchListener{
 	
 	@Override
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
-        if (Integer.parseInt(android.os.Build.VERSION.SDK) < 5
-                && keyCode == KeyEvent.KEYCODE_BACK ) {
+        if ( keyCode == KeyEvent.KEYCODE_BACK ) {
         	Log.d("BACK PRESS", "pressed the back button");
-        	main_back_button(keyCode, event);	
+        	if(FREEZE == mode) {
+        		main_back_button(keyCode, event);
+        		return true;
+        	} else {
+        		return super.onKeyDown(keyCode, event);
+        	}
         }
         
         // back button was not pressed
@@ -170,6 +173,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		case MotionEvent.ACTION_DOWN:
 			// handle action down
 			start.set(event.getX(), event.getY());
+
 			mode_change = NO_CHANGE;
 			break;
 
@@ -357,14 +361,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 	}
 	
 	// back button
-	private boolean main_back_button(int keyCode, KeyEvent event) {
-    	if(FREEZE == mode) {
-    		g_cam.startPreview();
-			mode = NORMAL;
-    		return true;
-    	} else {
-    		return super.onKeyDown(keyCode, event);
-    	}
+	private void main_back_button(int keyCode, KeyEvent event) {
+		g_cam.startPreview();
+		mode = NORMAL;
 	}
 	
 	// dump event for touch
