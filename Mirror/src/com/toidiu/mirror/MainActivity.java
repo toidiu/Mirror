@@ -5,11 +5,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.PointF;
 import android.hardware.Camera;
@@ -23,24 +23,25 @@ import android.os.Environment;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
-import android.view.GestureDetector.OnGestureListener;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import android.view.ViewManager;
 import android.view.WindowManager;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity implements OnTouchListener{
 
 	private Camera g_cam;
 	private Viewer g_viewer;
-	private int g_cam_id = 0;
+	private Shutter g_shut;
+	private Pic_raw g_pic_raw;
+	private Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
+	private int g_cam_id;
 	private FrameLayout g_preview_layout;
 	private int old_sys_brightness;
 	private float old_scrn_brightness;
@@ -68,7 +69,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode = NORMAL;
 		mode_change = NO_CHANGE;
 		
-		main_gesture_listener();
+		// set up touch listeners
+		main_touch_listener();
+		
+		// set up preferences
+		main_pref();
 	}
 	
 	@Override
@@ -160,18 +165,18 @@ public class MainActivity extends Activity implements OnTouchListener{
 				g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
-				main_toggle_overlay();
+				main_inst_on();
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change) ) {
 				g_cam.startPreview();
 				mode = NORMAL;
 				mode_change = CHANGE;
-				main_toggle_overlay1();
+				main_inst_off();
 			}
 			
 			// resume preview if move is up
 			if( (move_down > main_move_threshold) && (NORMAL == mode) ) {
-				g_cam.takePicture(shutterCallback, rawCallback, jpegCallback);
+				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
 			} else if( (move_down > main_move_threshold) && (FREEZE == mode) ) {
 				
 			}
@@ -320,7 +325,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	}
 
 	// enable gesture and gesture listeners
-	private void main_gesture_listener() {
+	private void main_touch_listener() {
 		View cam_view = findViewById(R.id.cam_frame);
 		cam_view.setOnTouchListener(this);
 	}
@@ -331,15 +336,29 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode = NORMAL;
 	}
 	
-	private void main_toggle_overlay() {
-		FrameLayout lay = (FrameLayout) findViewById(R.id.inst_arrow);
-		((ImageView)lay.findViewWithTag("arrow_dn")).setAlpha(0x7F);
+	private void main_inst_on() {
+		RelativeLayout lay = (RelativeLayout) findViewById(R.id.instruction);
+		((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0x9F);
+		((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0x9F000000);
 		lay.setVisibility(View.VISIBLE);
 	}
 	
-	private void main_toggle_overlay1() {
-		FrameLayout lay = (FrameLayout) findViewById(R.id.inst_arrow);
+	private void main_inst_off() {
+		RelativeLayout lay = (RelativeLayout) findViewById(R.id.instruction);
 		lay.setVisibility(View.GONE);
+	}
+	
+	private void main_pref() {
+		SharedPreferences settings= getSharedPreferences(getResources().getString(R.string.MyPrefsFile), 0);
+		boolean first_run= settings.getBoolean("first", true);
+
+		if(first_run){
+		///show instruction
+		SharedPreferences.Editor editor = settings.edit();  
+		editor.putBoolean("first", false);
+		// do tutorial
+		editor.commit();
+		}
 	}
 	
 	// dump event for touch
@@ -368,55 +387,5 @@ public class MainActivity extends Activity implements OnTouchListener{
 		sb.append("]");
 		Log.d(TAG, sb.toString());
 	}
-
-// Called when shutter is opened
-ShutterCallback shutterCallback = new ShutterCallback() {
-    public void onShutter() {
-        Log.d(TAG, "onShutter'd");
-    }
-};
-
-// Handles data for raw picture
-PictureCallback rawCallback = new PictureCallback() {
-    public void onPictureTaken(byte[] data, Camera camera) {
-        Log.d(TAG, "onPictureTaken - raw");
-    }
-};
-
-// Handles data for jpeg picture
-PictureCallback jpegCallback = new PictureCallback() {
-
-    public void onPictureTaken(byte[] data, Camera camera) {
-        FileOutputStream outStream = null;
-        try {
-            // generate the folder
-            File imagesFolder = new File(Environment.getExternalStorageDirectory(), "MirrorMirror");
-            if( !imagesFolder.exists() ) {
-            	imagesFolder.mkdirs();
-            }
-            // generate new image name
-            SimpleDateFormat formatter = new SimpleDateFormat("HH_mm_ss");
-            Date now = new Date();
-            String fileName = "image_" + formatter.format(now) + ".jpg";
-            // create outstream and write data
-            File image = new File(imagesFolder, fileName);
-            outStream = new FileOutputStream(image);
-            outStream.write(data);
-            outStream.close();
-            Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
-        } catch (FileNotFoundException e) { // <10>
-            //Toast.makeText(ctx, "Exception #2", Toast.LENGTH_LONG).show();
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {}
-        Log.d(TAG, "onPictureTaken - jpeg");
-        Context ctx = getApplicationContext();
-        Toast.makeText(ctx, "SAVED", Toast.LENGTH_SHORT).show();
-
-        camera.startPreview();
-    }
-};
-
 
 }

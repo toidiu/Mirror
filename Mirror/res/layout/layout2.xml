@@ -69,40 +69,36 @@
 	        android:layout_toLeftOf="@id/right_light_img_frm" >
 		</FrameLayout>
 		
-	    <!-- the overlay -->      
-        <FrameLayout 
-            android:id="@+id/inst_arrow"
-            android:visibility="gone"
+	    <!-- the overlay -->
+	    <RelativeLayout 
+	        android:id="@+id/instruction"
+            android:visibility="visible"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true" >
-            
-            <ImageView
-                android:tag="arrow_dn"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/arrow_down"
-                android:scaleType="fitXY"
-            />
-        </FrameLayout>
-        
-        <FrameLayout 
-            android:id="@+id/inst_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@id/inst_arrow"
-            android:layout_centerInParent="true"
-            android:paddingBottom="10dp" >
-                
+	        
             <TextView 
+                android:id="@+id/inst_txt"
                 android:tag="text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Swipe DOWN"
-                android:textSize="25sp"
+                android:typeface="normal"
+                android:textSize="20sp"
+                android:text="Swipe Down"
+            />
+            <ImageView
+                android:id="@+id/inst_arr"
+                android:tag="arrow_dn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/arrow_down1"
+                android:scaleType="fitXY"
+                android:layout_below="@id/inst_txt"
+                android:paddingTop="10dp"
+                android:layout_centerInParent="true"
             />
 
-        </FrameLayout>
+        </RelativeLayout>
 
         
     </RelativeLayout>
