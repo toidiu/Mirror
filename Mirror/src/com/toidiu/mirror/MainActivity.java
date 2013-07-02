@@ -25,6 +25,7 @@ import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.GestureDetector.OnGestureListener;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
@@ -32,6 +33,7 @@ import android.view.ViewManager;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity implements OnTouchListener{
@@ -61,28 +63,12 @@ public class MainActivity extends Activity implements OnTouchListener{
 		super.onCreate(savedInstanceState);
 		//requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.layout2);
-//		setContentView(R.layout.arrow_down);
-		//ImageView image = (ImageView) findViewById(R.id.top_light);
-		
-		/*
-		FrameLayout layout = (FrameLayout) findViewById(R.id.camera_preview);
-		int minHeight = layout.getWidth();
-		layout.setMinimumHeight(minHeight);
-		
-		TODO
-		*RelativeLayout rLayout = (RelativeLayout) findViewById (R.id.rLayout);
-   		 Resources res = getResources(); //resource handle
-	     Drawable drawable = res.getDrawable(R.drawable.newImage); //new Image that was added to the res folder
-    	 rLayout.setBackgroundDrawable(drawable);	
-		*/
+
 		g_cam_id = 100;
 		mode = NORMAL;
 		mode_change = NO_CHANGE;
 		
 		main_gesture_listener();
-		
-//	    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-
 	}
 	
 	@Override
@@ -131,22 +117,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		// stop the music
 		//main_stop_music();
 	}
-
-	@Override
-	protected void onSaveInstanceState(Bundle savedInstanceState) {
-		super.onSaveInstanceState(savedInstanceState);
-		
-//		savedInstanceState.putInt("mp_location", mp_position);
-//		savedInstanceState.putBoolean("restored", true);
-	}
-	
-	@Override
-	protected void onRestoreInstanceState(Bundle savedInstanceState) {
-		super.onRestoreInstanceState(savedInstanceState);
-		
-//		mp_position = savedInstanceState.getInt("mp_location");
-//		main_is_restored = savedInstanceState.getBoolean("restored");
-	}
 	
 	@Override
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
@@ -190,11 +160,13 @@ public class MainActivity extends Activity implements OnTouchListener{
 				g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
+				main_toggle_overlay();
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change) ) {
 				g_cam.startPreview();
 				mode = NORMAL;
 				mode_change = CHANGE;
+				main_toggle_overlay1();
 			}
 			
 			// resume preview if move is up
@@ -217,13 +189,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		return true;
 	}
 
-/* keep the app in portrait mode
- 	@Override
-	public void onConfigurationChanged(Configuration newConfig) {
-	    super.onConfigurationChanged(newConfig);
-	    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-	}
-*/
 //*********************************************************************
 //**********************end of override functions*********************
 //*********************************************************************
@@ -364,6 +329,17 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private void main_back_button(int keyCode, KeyEvent event) {
 		g_cam.startPreview();
 		mode = NORMAL;
+	}
+	
+	private void main_toggle_overlay() {
+		FrameLayout lay = (FrameLayout) findViewById(R.id.inst_arrow);
+		((ImageView)lay.findViewWithTag("arrow_dn")).setAlpha(0x7F);
+		lay.setVisibility(View.VISIBLE);
+	}
+	
+	private void main_toggle_overlay1() {
+		FrameLayout lay = (FrameLayout) findViewById(R.id.inst_arrow);
+		lay.setVisibility(View.GONE);
 	}
 	
 	// dump event for touch

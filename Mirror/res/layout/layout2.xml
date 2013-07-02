@@ -68,6 +68,42 @@
 	        android:layout_toRightOf="@id/left_light_img_frm"
 	        android:layout_toLeftOf="@id/right_light_img_frm" >
 		</FrameLayout>
+		
+	    <!-- the overlay -->      
+        <FrameLayout 
+            android:id="@+id/inst_arrow"
+            android:visibility="gone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true" >
+            
+            <ImageView
+                android:tag="arrow_dn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/arrow_down"
+                android:scaleType="fitXY"
+            />
+        </FrameLayout>
+        
+        <FrameLayout 
+            android:id="@+id/inst_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/inst_arrow"
+            android:layout_centerInParent="true"
+            android:paddingBottom="10dp" >
+                
+            <TextView 
+                android:tag="text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Swipe DOWN"
+                android:textSize="25sp"
+            />
+
+        </FrameLayout>
+
         
     </RelativeLayout>
 
