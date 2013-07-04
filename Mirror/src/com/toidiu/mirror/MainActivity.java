@@ -1,12 +1,5 @@
 package com.toidiu.mirror;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -14,12 +7,9 @@ import android.content.pm.PackageManager;
 import android.graphics.PointF;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
-import android.hardware.Camera.PictureCallback;
-import android.hardware.Camera.ShutterCallback;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
@@ -32,12 +22,13 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity implements OnTouchListener{
 
 	private Camera g_cam;
 	private Viewer g_viewer;
+	private MediaPlayer g_mp;
+	private Music g_music = new Music(this, g_mp);
 	private Shutter g_shut;
 	private Pic_raw g_pic_raw;
 	private Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
@@ -45,8 +36,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private FrameLayout g_preview_layout;
 	private int old_sys_brightness;
 	private float old_scrn_brightness;
-	private MediaPlayer mp;
-	private int mp_position;
 	private PointF start = new PointF();
 	private static final String TAG = "Touch";
 	private final int main_move_threshold = 70;
@@ -56,6 +45,8 @@ public class MainActivity extends Activity implements OnTouchListener{
 	static final int CHANGE = 0;
 	static final int NO_CHANGE = 1;	
 	private int mode_change;
+	static private SharedPreferences settings;
+	public static final String PREFS_NAME = "MyPrefsFile";
 	
 	// gets camera id. creates a layout and clears it. 
 	// calls a function to create viewer and add it to the layout
@@ -93,7 +84,8 @@ public class MainActivity extends Activity implements OnTouchListener{
 		main_start_camera_layout(g_preview_layout, g_cam_id);
 		
 		// start music
-		//main_start_music();
+		setVolumeControlStream(AudioManager.STREAM_MUSIC);
+		//g_music.m_start_music();
 	}
 	
 	// restore brightness, stop music and release camera
@@ -109,10 +101,15 @@ public class MainActivity extends Activity implements OnTouchListener{
 		getWindow().setAttributes(lp);
 		
 		// pause the music and get current location
-		//main_stop_music();
+		//g_music.m_stop_music();
 		
 		// release views/camera
 		main_release_camera(g_preview_layout, g_cam);
+		
+		SharedPreferences.Editor editor = settings.edit();  
+		editor.putBoolean("first", false);
+		// do tutorial
+		editor.commit();
 	}
 	
 	@Override
@@ -120,11 +117,12 @@ public class MainActivity extends Activity implements OnTouchListener{
 		super.onStop();
 		
 		// stop the music
-		//main_stop_music();
+		//g_music.m_stop_music();
 	}
 	
 	@Override
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
+		// back key
         if ( keyCode == KeyEvent.KEYCODE_BACK ) {
         	Log.d("BACK PRESS", "pressed the back button");
         	if(FREEZE == mode) {
@@ -133,6 +131,12 @@ public class MainActivity extends Activity implements OnTouchListener{
         	} else {
         		return super.onKeyDown(keyCode, event);
         	}
+        }
+        
+        // volume keys
+        if ((keyCode == KeyEvent.KEYCODE_VOLUME_UP) 
+        		|| (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            return super.onKeyUp(keyCode, event);
         }
         
         // back button was not pressed
@@ -165,7 +169,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 				g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
-				main_inst_on();
+				main_inst_off();
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change) ) {
 				g_cam.startPreview();
@@ -276,40 +280,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		old_scrn_brightness = getWindow().getAttributes().screenBrightness;
     }
-    
-    // start music
-	private void main_start_music() {
-		setVolumeControlStream(AudioManager.STREAM_MUSIC);
-		int music;
-		music = R.raw.i_feel_pretty;
-		
-		if(mp != null) { mp.release(); }
-		
-		mp = MediaPlayer.create(this, music);
-		mp.setLooping(true);
-		mp.start();
-
-/*		if(main_is_restored == true) {// TODO
-			mp.seekTo(mp_position);
-
-	
-		}
-*/
-
-	}
-	
-	// stop music
-	private void main_stop_music() {
-		mp.stop();
-		mp.release();
-		mp = null;
-	}
-
-	// pause music
-	private void main_pause_music() {
-		mp_position = mp.getCurrentPosition();
-		mp.pause();
-	}
 	
 	// release camera and layout
 	private void main_release_camera(FrameLayout layout, Camera cam ) {
@@ -338,8 +308,8 @@ public class MainActivity extends Activity implements OnTouchListener{
 	
 	private void main_inst_on() {
 		RelativeLayout lay = (RelativeLayout) findViewById(R.id.instruction);
-		((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0x9F);
-		((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0x9F000000);
+		((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0xFF);
+		((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xFF000000);
 		lay.setVisibility(View.VISIBLE);
 	}
 	
@@ -349,15 +319,12 @@ public class MainActivity extends Activity implements OnTouchListener{
 	}
 	
 	private void main_pref() {
-		SharedPreferences settings= getSharedPreferences(getResources().getString(R.string.MyPrefsFile), 0);
-		boolean first_run= settings.getBoolean("first", true);
+		settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+		boolean first_run = settings.getBoolean("first", true);
 
 		if(first_run){
 		///show instruction
-		SharedPreferences.Editor editor = settings.edit();  
-		editor.putBoolean("first", false);
-		// do tutorial
-		editor.commit();
+		main_inst_on();
 		}
 	}
 	
