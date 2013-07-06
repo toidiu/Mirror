@@ -18,14 +18,19 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.toidiu.mirror.variables;
 
 public class MainActivity extends Activity implements OnTouchListener{
 
-	private Camera g_cam;
+	public Camera g_cam;
 	private Viewer g_viewer;
 	private MediaPlayer g_mp;
 	private Music g_music = new Music(this, g_mp);
@@ -34,6 +39,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
 	private int g_cam_id;
 	private FrameLayout g_preview_layout;
+	
+	static private int g_inst_lvl;
+	
 	private int old_sys_brightness;
 	private float old_scrn_brightness;
 	private PointF start = new PointF();
@@ -46,7 +54,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	static final int NO_CHANGE = 1;	
 	private int mode_change;
 	static private SharedPreferences settings;
-	public static final String PREFS_NAME = "MyPrefsFile";
+	public static final String PREFS_NAME = "PrefsFile";
 	
 	// gets camera id. creates a layout and clears it. 
 	// calls a function to create viewer and add it to the layout
@@ -59,12 +67,28 @@ public class MainActivity extends Activity implements OnTouchListener{
 		g_cam_id = 100;
 		mode = NORMAL;
 		mode_change = NO_CHANGE;
+		// show the instructions everytime on default
+		g_inst_lvl = 0;
 		
 		// set up touch listeners
 		main_touch_listener();
 		
 		// set up preferences
-		main_pref();
+		settings = getSharedPreferences(PREFS_NAME, 0);
+		
+		pref_testing(); //TODO test code
+		g_inst_lvl = settings.getInt("first", 0);	//< first time show the instructions
+		if(3 != g_inst_lvl) {
+			g_inst_lvl = 0;
+			main_instruction();
+		}
+	}
+
+	private void pref_testing() {
+		SharedPreferences.Editor editor = settings.edit();  
+		editor.putInt("first", 0);
+		// do tutorial
+		editor.commit();
 	}
 	
 	@Override
@@ -107,7 +131,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		main_release_camera(g_preview_layout, g_cam);
 		
 		SharedPreferences.Editor editor = settings.edit();  
-		editor.putBoolean("first", false);
+		editor.putInt("first", g_inst_lvl);
 		// do tutorial
 		editor.commit();
 	}
@@ -156,39 +180,45 @@ public class MainActivity extends Activity implements OnTouchListener{
 			mode_change = NO_CHANGE;
 			break;
 
-		case MotionEvent.ACTION_UP:
-			// handle action up
-			break;
-
 		case MotionEvent.ACTION_MOVE:
 			double move_down = Math.abs(start.y) - Math.abs(event.getY());
 			
-			// move is down toggles freeze and normal
+			// MOVE DOWN: toggles freeze and normal
 			if( (move_down < -main_move_threshold) && (NORMAL == mode) 
 					&& (NO_CHANGE == mode_change) ) {
 				g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
-				main_inst_off();
+				if (0 == g_inst_lvl) {
+					g_inst_lvl++;
+					main_instruction();
+					Toast.makeText(this, "Freeze Mirror", Toast.LENGTH_SHORT).show();
+				}
+				
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change) ) {
 				g_cam.startPreview();
 				mode = NORMAL;
 				mode_change = CHANGE;
-				main_inst_off();
+				if (1 == g_inst_lvl) {
+					g_inst_lvl++;
+					main_instruction();
+					Toast.makeText(this, "Resume Mirror", Toast.LENGTH_SHORT).show();
+				}
 			}
 			
-			// resume preview if move is up
+			// MOVE UP: resume preview
 			if( (move_down > main_move_threshold) && (NORMAL == mode) ) {
 				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
+				if (2 == g_inst_lvl) {
+					g_inst_lvl++;
+					main_instruction();
+
+				}
 			} else if( (move_down > main_move_threshold) && (FREEZE == mode) ) {
 				
 			}
 			
-			break;
-			
-		case MotionEvent.ACTION_POINTER_DOWN:
-			// handle action 
 			break;
 			
 		default:
@@ -306,30 +336,57 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode = NORMAL;
 	}
 	
-	private void main_inst_on() {
-		RelativeLayout lay = (RelativeLayout) findViewById(R.id.instruction);
-		((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0xFF);
-		((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xFF000000);
-		lay.setVisibility(View.VISIBLE);
-	}
-	
-	private void main_inst_off() {
-		RelativeLayout lay = (RelativeLayout) findViewById(R.id.instruction);
-		lay.setVisibility(View.GONE);
-	}
-	
-	private void main_pref() {
-		settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-		boolean first_run = settings.getBoolean("first", true);
+	private void main_instruction() {
+		RelativeLayout lay;
+		
+		switch (g_inst_lvl) {
+		case 0:
+			//Toast.makeText(this, "Lets swipe down to freeze the image.", Toast.LENGTH_LONG).show();
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0xFF);
+			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Down");
+			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
+			lay.setVisibility(View.VISIBLE);
+			break;
+		case 1:
+			//Toast.makeText(this, "Lets swipe down again to resume the image.", Toast.LENGTH_LONG).show();
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0xFF);
+			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Down");
+			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
+			lay.setVisibility(View.VISIBLE);
+			break;
+		case 2:
+			//Toast.makeText(this, "Finally lets swipe up to save that image.", Toast.LENGTH_LONG).show();
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			ImageView img_lay = (ImageView)findViewById(R.id.inst_arr);
+			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_up1));
+			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Up");
+			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
+			lay.setVisibility(View.VISIBLE);
 
-		if(first_run){
-		///show instruction
-		main_inst_on();
+			/*
+			// rotation from 0 to 180 degrees here
+			// ((ImageView)lay.findViewById(R.id.inst_arr)).setRotation(180); 
+			RotateAnimation a = new RotateAnimation(0, 10, Animation.RELATIVE_TO_SELF, 340, Animation.RELATIVE_TO_SELF, 625);
+			a.setFillAfter(true);
+			a.setDuration(0);
+			img_lay.startAnimation(a);
+			*/			
+			break;
+		case 3:
+			// the instructions were already done. set visibility to gone
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			lay.setVisibility(View.GONE);
+			break;
+		default:
+			break;
 		}
+
 	}
 	
 	// dump event for touch
-	private void main_dump_event(MotionEvent event) {
+	private void main_dump_event(MotionEvent event) { 
 		String names[] = { "DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE",
 				"POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?" };
 		StringBuilder sb = new StringBuilder();

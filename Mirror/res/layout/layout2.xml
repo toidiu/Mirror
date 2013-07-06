@@ -8,7 +8,7 @@
     android:background="#ff000000" 
     >
     
-    <!-- top frame -->
+<!-- top frame -->
     <FrameLayout
 	    android:id="@+id/top_light"
 	    android:layout_width="fill_parent"
@@ -23,16 +23,18 @@
             android:scaleType="fitXY"
 		/>
     </FrameLayout>
+<!-- End of top frame -->
   
-    <!-- mid frame -->
+<!-- mid frame -->
     <RelativeLayout 
         android:id="@+id/cam_frame"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_weight="6" >
 		
+<!-- left/right light frame -->
         <FrameLayout 
-            android:id="@+id/left_light_img_frm"
+            android:id="@+id/left_light_frm"
             android:layout_width="50dp"
             android:layout_height="fill_parent"
             android:layout_alignParentLeft="true" >
@@ -47,7 +49,7 @@
         </FrameLayout>
         
         <FrameLayout 
-            android:id="@+id/right_light_img_frm"
+            android:id="@+id/right_light_frm"
             android:layout_width="50dp"
             android:layout_height="fill_parent"
             android:layout_alignParentRight="true" >
@@ -60,16 +62,32 @@
                 android:scaleType="fitXY"
 	        />
         </FrameLayout>
-        
+<!-- End of left/right light frame -->
+
+<!-- camera preview -->
 	    <FrameLayout
 			android:id="@+id/camera_preview"
 	        android:layout_width="wrap_content"
 	        android:layout_height="fill_parent"
-	        android:layout_toRightOf="@id/left_light_img_frm"
-	        android:layout_toLeftOf="@id/right_light_img_frm" >
+	        android:layout_toRightOf="@id/left_light_frm"
+	        android:layout_toLeftOf="@id/right_light_frm" >
 		</FrameLayout>
+<!-- End of camera preview -->
 		
-	    <!-- the overlay -->
+<!-- instruction text and image -->
+            <TextView 
+                android:id="@+id/detail_inst_txt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_toLeftOf="@id/right_light_frm"
+                android:layout_toRightOf="@id/left_light_frm"
+                android:text="test"
+                android:typeface="normal"
+                android:textSize="20sp"
+                android:visibility="gone"
+            />
+
 	    <RelativeLayout 
 	        android:id="@+id/instruction"
             android:visibility="visible"
@@ -84,7 +102,6 @@
                 android:layout_height="wrap_content"
                 android:typeface="normal"
                 android:textSize="20sp"
-                android:text="Swipe Down"
             />
             <ImageView
                 android:id="@+id/inst_arr"
@@ -99,11 +116,13 @@
             />
 
         </RelativeLayout>
+<!-- End of instruction text and image -->
 
         
     </RelativeLayout>
+<!-- End of mid frame -->
 
-	<!-- bot frame -->
+<!-- bot frame -->
 	<FrameLayout
 		android:id="@+id/bot_light"
 		android:layout_width="fill_parent"
@@ -118,6 +137,7 @@
             android:scaleType="fitXY"
 		/>
 	</FrameLayout>
+<!-- End of bot frame -->
 
   
 </LinearLayout>
