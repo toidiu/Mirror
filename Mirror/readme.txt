@@ -1,7 +1,7 @@
 future features
 
 ---------important
-refine instructions
+add deatils to instruction
 add picture save while freeze
 
 
@@ -19,3 +19,4 @@ add picture effects
 ---------done
 add camera freeze
 add picture save
+only instruction command allowed during instruction mode

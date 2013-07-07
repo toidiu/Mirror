@@ -65,13 +65,13 @@
 <!-- End of left/right light frame -->
 
 <!-- camera preview -->
-	    <FrameLayout
-			android:id="@+id/camera_preview"
-	        android:layout_width="wrap_content"
-	        android:layout_height="fill_parent"
-	        android:layout_toRightOf="@id/left_light_frm"
-	        android:layout_toLeftOf="@id/right_light_frm" >
-		</FrameLayout>
+        <FrameLayout
+            android:id="@+id/camera_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@id/left_light_frm"
+            android:layout_toLeftOf="@id/right_light_frm" >
+        </FrameLayout>
 <!-- End of camera preview -->
 		
 <!-- instruction text and image -->
@@ -138,6 +138,5 @@
 		/>
 	</FrameLayout>
 <!-- End of bot frame -->
-
   
 </LinearLayout>

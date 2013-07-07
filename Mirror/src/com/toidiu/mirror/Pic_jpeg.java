@@ -18,8 +18,9 @@ public class Pic_jpeg implements PictureCallback{
 	
 	private static final String TAG = "Picture_jpeg";
 	private Context ctx;
+	private static byte[] pj_data;
 	
-	public Pic_jpeg(Context  p_context) {
+	public Pic_jpeg(Context p_context) {
 		ctx = p_context;
 	}
 	
@@ -40,6 +41,9 @@ public class Pic_jpeg implements PictureCallback{
             outStream = new FileOutputStream(image);
             outStream.write(data);
             outStream.close();
+            
+            pj_data = data;
+            
             Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
         } catch (FileNotFoundException e) { // <10>
             //Toast.makeText(ctx, "Exception #2", Toast.LENGTH_LONG).show();
@@ -49,9 +53,10 @@ public class Pic_jpeg implements PictureCallback{
         } finally {}
         Log.d(TAG, "onPictureTaken - jpeg");
         Toast.makeText(ctx, "SAVED", Toast.LENGTH_SHORT).show();
-
-        camera.startPreview();
     }
     
+    public byte[] pj_rtn_data() {
+    	return pj_data;
+    }
     
 }

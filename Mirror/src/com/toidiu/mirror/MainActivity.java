@@ -1,5 +1,12 @@
 package com.toidiu.mirror;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -10,11 +17,13 @@ import android.hardware.Camera.CameraInfo;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
@@ -36,24 +45,33 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private Music g_music = new Music(this, g_mp);
 	private Shutter g_shut;
 	private Pic_raw g_pic_raw;
-	private Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
+
 	private int g_cam_id;
 	private FrameLayout g_preview_layout;
 	
-	static private int g_inst_lvl;
-	
-	private int old_sys_brightness;
-	private float old_scrn_brightness;
-	private PointF start = new PointF();
-	private static final String TAG = "Touch";
-	private final int main_move_threshold = 70;
-	static final int NORMAL = 0;
-	static final int FREEZE = 1;
+	static private int g_inst_mode;
+	static final private int g_inst_frz = 0;
+	static final private int g_inst_rsm = 1;
+	static final private int g_inst_save = 2;
+	static final private int g_inst_norm = 3;
+
 	private int mode;
+	private static final int NORMAL = 0;
+	private static final int FREEZE = 1;
+	private static byte[] g_data;
+	
 	static final int CHANGE = 0;
 	static final int NO_CHANGE = 1;	
 	private int mode_change;
-	static private SharedPreferences settings;
+	
+	private int old_sys_brt;
+	private float old_scrn_brt;
+	
+	private PointF start = new PointF();
+	private static final String TAG = "Touch";
+	private final int main_move_threshold = 70;
+	
+	private static SharedPreferences settings;
 	public static final String PREFS_NAME = "PrefsFile";
 	
 	// gets camera id. creates a layout and clears it. 
@@ -68,7 +86,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode = NORMAL;
 		mode_change = NO_CHANGE;
 		// show the instructions everytime on default
-		g_inst_lvl = 0;
+		g_inst_mode = 0;
 		
 		// set up touch listeners
 		main_touch_listener();
@@ -77,9 +95,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 		settings = getSharedPreferences(PREFS_NAME, 0);
 		
 		pref_testing(); //TODO test code
-		g_inst_lvl = settings.getInt("first", 0);	//< first time show the instructions
-		if(3 != g_inst_lvl) {
-			g_inst_lvl = 0;
+		g_inst_mode = settings.getInt("first", 0);	//< first time show the instructions
+		if(g_inst_norm != g_inst_mode) {
+			g_inst_mode = g_inst_norm;
 			main_instruction();
 		}
 	}
@@ -119,9 +137,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		// restore original brightness
     	Settings.System.putInt(getContentResolver(),
-				Settings.System.SCREEN_BRIGHTNESS, old_sys_brightness);
+				Settings.System.SCREEN_BRIGHTNESS, old_sys_brt);
 		WindowManager.LayoutParams lp = getWindow().getAttributes();
-		lp.screenBrightness = old_scrn_brightness;
+		lp.screenBrightness = old_scrn_brt;
 		getWindow().setAttributes(lp);
 		
 		// pause the music and get current location
@@ -131,7 +149,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		main_release_camera(g_preview_layout, g_cam);
 		
 		SharedPreferences.Editor editor = settings.edit();  
-		editor.putInt("first", g_inst_lvl);
+		editor.putInt("first", g_inst_mode);
 		// do tutorial
 		editor.commit();
 	}
@@ -185,38 +203,46 @@ public class MainActivity extends Activity implements OnTouchListener{
 			
 			// MOVE DOWN: toggles freeze and normal
 			if( (move_down < -main_move_threshold) && (NORMAL == mode) 
-					&& (NO_CHANGE == mode_change) ) {
+					&& (NO_CHANGE == mode_change)
+					&& ((g_inst_frz == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
+				Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
+				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
+				g_data = g_pic_jpeg.pj_rtn_data();
 				g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
-				if (0 == g_inst_lvl) {
-					g_inst_lvl++;
+				if (g_inst_frz == g_inst_mode) {
+					g_inst_mode++;
 					main_instruction();
 					Toast.makeText(this, "Freeze Mirror", Toast.LENGTH_SHORT).show();
 				}
 				
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
-					&& (NO_CHANGE == mode_change) ) {
+					&& (NO_CHANGE == mode_change)
+					&& ((g_inst_rsm == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
 				g_cam.startPreview();
 				mode = NORMAL;
 				mode_change = CHANGE;
-				if (1 == g_inst_lvl) {
-					g_inst_lvl++;
+				if (g_inst_rsm == g_inst_mode) {
+					g_inst_mode++;
 					main_instruction();
 					Toast.makeText(this, "Resume Mirror", Toast.LENGTH_SHORT).show();
 				}
 			}
 			
 			// MOVE UP: resume preview
-			if( (move_down > main_move_threshold) && (NORMAL == mode) ) {
+			if( (move_down > main_move_threshold) && (NORMAL == mode)
+					&& ((g_inst_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
+				Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
 				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
-				if (2 == g_inst_lvl) {
-					g_inst_lvl++;
+				g_data = g_pic_jpeg.pj_rtn_data();
+				main_save_pic(g_data);
+				if (g_inst_save == g_inst_mode) {
+					g_inst_mode++;
 					main_instruction();
-
 				}
 			} else if( (move_down > main_move_threshold) && (FREEZE == mode) ) {
-				
+				main_save_pic(g_data);
 			}
 			
 			break;
@@ -226,6 +252,38 @@ public class MainActivity extends Activity implements OnTouchListener{
 		}
 		
 		return true;
+	}
+	
+	
+	private void main_save_pic(byte[] data) {
+        FileOutputStream outStream = null;
+        try {
+            // generate the folder
+            File imagesFolder = new File(Environment.getExternalStorageDirectory(), "MirrorMirror");
+            if( !imagesFolder.exists() ) {
+            	imagesFolder.mkdirs();
+            }
+            // generate new image name
+            SimpleDateFormat formatter = new SimpleDateFormat("HH_mm_ss");
+            Date now = new Date();
+            String fileName = "image_" + formatter.format(now) + ".jpg";
+            // create outstream and write data
+            File image = new File(imagesFolder, fileName);
+            outStream = new FileOutputStream(image);
+            outStream.write(data);
+            outStream.close();
+            
+
+            
+            Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
+        } catch (FileNotFoundException e) { // <10>
+            //Toast.makeText(ctx, "Exception #2", Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {}
+        Log.d(TAG, "onPictureTaken - jpeg");
+        Toast.makeText(this, "SAVED", Toast.LENGTH_SHORT).show();
 	}
 
 //*********************************************************************
@@ -302,13 +360,13 @@ public class MainActivity extends Activity implements OnTouchListener{
     // get original system brightness and screen brightness
     private void main_get_orig_brightness() {
 		try {
-			old_sys_brightness = Settings.System.getInt(getContentResolver(),
+			old_sys_brt = Settings.System.getInt(getContentResolver(),
 					Settings.System.SCREEN_BRIGHTNESS);
 		} catch (SettingNotFoundException e) {
 			e.printStackTrace();
 		}
 		
-		old_scrn_brightness = getWindow().getAttributes().screenBrightness;
+		old_scrn_brt = getWindow().getAttributes().screenBrightness;
     }
 	
 	// release camera and layout
@@ -336,10 +394,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode = NORMAL;
 	}
 	
+	@SuppressWarnings("deprecation")
 	private void main_instruction() {
 		RelativeLayout lay;
 		
-		switch (g_inst_lvl) {
+		switch (g_inst_mode) {
 		case 0:
 			//Toast.makeText(this, "Lets swipe down to freeze the image.", Toast.LENGTH_LONG).show();
 			lay = (RelativeLayout) findViewById(R.id.instruction);
@@ -386,6 +445,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	}
 	
 	// dump event for touch
+	@SuppressWarnings("deprecation")
 	private void main_dump_event(MotionEvent event) { 
 		String names[] = { "DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE",
 				"POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?" };
