@@ -31,6 +31,7 @@ public class Pic_jpeg implements PictureCallback{
             if( !imagesFolder.exists() ) {
             	imagesFolder.mkdirs();
             }
+            String file_path = imagesFolder.getPath();
             // generate new image name
             SimpleDateFormat formatter = new SimpleDateFormat("HH_mm_ss");
             Date now = new Date();
@@ -40,15 +41,15 @@ public class Pic_jpeg implements PictureCallback{
             outStream = new FileOutputStream(image);
             outStream.write(data);
             outStream.close();
+            
             Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
+            Toast.makeText(ctx, "SAVED at: " + file_path, Toast.LENGTH_SHORT).show();
         } catch (FileNotFoundException e) { // <10>
             //Toast.makeText(ctx, "Exception #2", Toast.LENGTH_LONG).show();
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {}
-        Log.d(TAG, "onPictureTaken - jpeg");
-        Toast.makeText(ctx, "SAVED", Toast.LENGTH_SHORT).show();
         
         camera.startPreview();
     }

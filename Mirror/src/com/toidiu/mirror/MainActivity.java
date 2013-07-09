@@ -1,9 +1,12 @@
 package com.toidiu.mirror;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.text.DateFormat.Field;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -24,19 +27,14 @@ import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.toidiu.mirror.variables;
 
 public class MainActivity extends Activity implements OnTouchListener{
 
@@ -44,9 +42,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private Viewer g_viewer;
 	private MediaPlayer g_mp;
 	private Music g_music = new Music(this, g_mp);
-	private Shutter g_shut = new Shutter();
+	private Shutter g_shut;
 	private Pic_raw g_pic_raw = new Pic_raw();
 	private Pic_jpeg g_pic_jpeg;
+	private temp_jpeg g_temp_jpeg;
+	private static File temp;
 
 	private int g_cam_id;
 	private FrameLayout g_preview_layout;
@@ -60,7 +60,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private int mode;
 	private static final int NORMAL = 0;
 	private static final int FREEZE = 1;
-	public byte[] g_data;
 	
 	static final int CHANGE = 0;
 	static final int NO_CHANGE = 1;	
@@ -76,8 +75,10 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private static SharedPreferences settings;
 	public static final String PREFS_NAME = "PrefsFile";
 	
-	// gets camera id. creates a layout and clears it. 
-	// calls a function to create viewer and add it to the layout
+//*********************************************************************
+//**********************end of global variables   *********************
+//*********************************************************************
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -96,12 +97,20 @@ public class MainActivity extends Activity implements OnTouchListener{
 		// set up preferences
 		settings = getSharedPreferences(PREFS_NAME, 0);
 		
+		g_shut = new Shutter(this);
 		g_pic_jpeg = new Pic_jpeg(this);
+		g_temp_jpeg = new temp_jpeg();
+		try {
+			temp = File.createTempFile("temp", ".jpg");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		
 		pref_testing(); //TODO test code
 		g_inst_mode = settings.getInt("first", 0);	//< first time show the instructions
 		if(g_inst_norm != g_inst_mode) {
-			g_inst_mode = g_inst_frz; // TODO remove testing code
+			g_inst_mode = g_inst_norm; // TODO remove testing code
 			main_instruction();
 		}
 	}
@@ -188,7 +197,7 @@ public class MainActivity extends Activity implements OnTouchListener{
         // back button was not pressed
         return super.onKeyDown(keyCode, event);
 	}
-
+	
 	@Override
 	public boolean onTouch(View v, MotionEvent event) {
 		
@@ -205,12 +214,15 @@ public class MainActivity extends Activity implements OnTouchListener{
 		case MotionEvent.ACTION_MOVE:
 			double move_down = Math.abs(start.y) - Math.abs(event.getY());
 			
-			// MOVE DOWN: toggles freeze and normal
+			// MOVE DOWN: stop preview
 			if( (move_down < -main_move_threshold) && (NORMAL == mode) 
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_frz == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
-				//g_cam.takePicture(g_shut, g_pic_raw, bla);
-				g_cam.stopPreview();
+				
+				AudioManager mgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+			    mgr.setStreamMute(AudioManager.STREAM_SYSTEM, true);
+				g_cam.takePicture(g_shut, g_pic_raw, g_temp_jpeg);
+				//g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
 				if (g_inst_frz == g_inst_mode) {
@@ -218,7 +230,10 @@ public class MainActivity extends Activity implements OnTouchListener{
 					main_instruction();
 				}
 				Toast.makeText(this, "Freeze Mirror", Toast.LENGTH_SHORT).show();
-			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
+			}
+			
+			// MOVE DOWN: start preview
+			else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_rsm == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
 				g_cam.startPreview();
@@ -231,7 +246,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 				Toast.makeText(this, "Resume Mirror", Toast.LENGTH_SHORT).show();
 			}
 			
-			// MOVE UP: resume preview
+			// MOVE UP: normal save picture
 			else if( (move_down > main_move_threshold) && (NORMAL == mode)
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
@@ -241,11 +256,20 @@ public class MainActivity extends Activity implements OnTouchListener{
 					g_inst_mode++;
 					main_instruction();
 				}
-				Toast.makeText(this, "Normal Save test", Toast.LENGTH_SHORT).show();
-			} else if( (move_down > main_move_threshold) 
+			}
+
+			// MOVE UP: freeze save picture
+			else if( (move_down > main_move_threshold) 
 					&& (NO_CHANGE == mode_change) && (FREEZE == mode) ) {
+				try {
+					File dst = main_file_gen();
+					main_cpy_file(temp, dst);
+		            String file_path = dst.getPath();
+					Toast.makeText(this, "Saved at: " + file_path, Toast.LENGTH_SHORT).show();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 				mode_change = CHANGE;
-				Toast.makeText(this, "Freeze save test", Toast.LENGTH_SHORT).show();
 			}
 			
 			break;
@@ -258,7 +282,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	}
 
 //*********************************************************************
-//**********************end of override functions*********************
+//**********************end of override functions *********************
 //*********************************************************************
 
 	// Check if this device has a front camera. (returns a bool)
@@ -398,7 +422,8 @@ public class MainActivity extends Activity implements OnTouchListener{
 			/*
 			// rotation from 0 to 180 degrees here
 			// ((ImageView)lay.findViewById(R.id.inst_arr)).setRotation(180); 
-			RotateAnimation a = new RotateAnimation(0, 10, Animation.RELATIVE_TO_SELF, 340, Animation.RELATIVE_TO_SELF, 625);
+			RotateAnimation a = new RotateAnimation(0, 10, 
+			Animation.RELATIVE_TO_SELF, 340, Animation.RELATIVE_TO_SELF, 625);
 			a.setFillAfter(true);
 			a.setDuration(0);
 			img_lay.startAnimation(a);
@@ -444,5 +469,61 @@ public class MainActivity extends Activity implements OnTouchListener{
 		sb.append("]");
 		Log.d(TAG, sb.toString());
 	}
+	
+//*********************************************************************
+//**********************New temp jpeg class       *********************
+//*********************************************************************
 
+	public class temp_jpeg implements PictureCallback {
+		
+		@Override
+		public void onPictureTaken(byte[] data, Camera camera) {
+			FileOutputStream outStream = null;
+			
+			try {
+				outStream = new FileOutputStream(temp);
+	            outStream.write(data);
+	            outStream.close();
+	            Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
+	            temp.deleteOnExit();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } finally {}
+			
+	        Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
+		}
+		
+	}
+	
+	@SuppressWarnings("resource")
+	private static void main_cpy_file(File src, File dst) throws IOException
+	{
+		FileChannel inChannel = new FileInputStream(src).getChannel();
+		FileChannel outChannel = new FileOutputStream(dst).getChannel();
+	    try
+	    {
+	        inChannel.transferTo(0, inChannel.size(), outChannel);
+	    }
+	    finally
+	    {
+	        if (inChannel != null)
+	            inChannel.close();
+	        if (outChannel != null)
+	            outChannel.close();
+	    }
+	}
+	
+	private File main_file_gen() {
+		File imagesFolder = new File(Environment.getExternalStorageDirectory(), "MirrorMirror");
+        if( !imagesFolder.exists() ) {
+        	imagesFolder.mkdirs();
+        }
+        // generate new image name
+        SimpleDateFormat formatter = new SimpleDateFormat("HH_mm_ss");
+        Date now = new Date();
+        String fileName = "image_" + formatter.format(now) + ".jpg";
+        // create outstream and write data
+        File image = new File(imagesFolder, fileName);
+        return image;
+	}
 }
