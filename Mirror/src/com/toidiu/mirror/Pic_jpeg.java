@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
@@ -23,7 +24,8 @@ public class Pic_jpeg implements PictureCallback{
 		ctx = p_context;
 	}
 	
-    public void onPictureTaken(byte[] data, Camera camera) {
+    @SuppressLint("SimpleDateFormat")
+	public void onPictureTaken(byte[] data, Camera camera) {
         FileOutputStream outStream = null;
         try {
             // generate the folder

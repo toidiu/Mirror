@@ -18,8 +18,8 @@ public class Shutter implements ShutterCallback {
 	@Override
 	public void onShutter() {
 		Log.d(TAG, "onShutter'd");
-		//AudioManager mgr = (AudioManager)ctx.getSystemService(ctx.AUDIO_SERVICE);
-	   // mgr.setStreamMute(AudioManager.STREAM_SYSTEM, false);
+		AudioManager mgr = (AudioManager)ctx.getSystemService(Context.AUDIO_SERVICE);
+		mgr.setStreamMute(AudioManager.STREAM_SYSTEM, false);
 	}
 
 }

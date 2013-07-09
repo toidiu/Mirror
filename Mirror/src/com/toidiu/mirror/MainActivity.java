@@ -2,14 +2,13 @@ package com.toidiu.mirror;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import java.text.DateFormat.Field;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -51,11 +50,17 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private int g_cam_id;
 	private FrameLayout g_preview_layout;
 	
+	
+	private static SharedPreferences settings;
+	public static final String PREFS_NAME = "PrefsFile";
+		
+	public static final String INST_MODE = "first";
 	static private int g_inst_mode;
 	static final private int g_inst_frz = 0;
-	static final private int g_inst_rsm = 1;
-	static final private int g_inst_save = 2;
-	static final private int g_inst_norm = 3;
+	static final private int g_inst_frz_save = 1;
+	static final private int g_inst_rsm = 2;
+	static final private int g_inst_norm_save = 3;
+	static final private int g_inst_norm = 4;
 
 	private int mode;
 	private static final int NORMAL = 0;
@@ -71,9 +76,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private PointF start = new PointF();
 	private static final String TAG = "Touch";
 	private final int main_move_threshold = 70;
-	
-	private static SharedPreferences settings;
-	public static final String PREFS_NAME = "PrefsFile";
 	
 //*********************************************************************
 //**********************end of global variables   *********************
@@ -108,16 +110,16 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		
 		pref_testing(); //TODO test code
-		g_inst_mode = settings.getInt("first", 0);	//< first time show the instructions
+		g_inst_mode = settings.getInt(INST_MODE, 0);	//< first time show the instructions
 		if(g_inst_norm != g_inst_mode) {
-			g_inst_mode = g_inst_norm; // TODO remove testing code
-			main_instruction();
+			g_inst_mode = g_inst_frz; // TODO remove testing code
 		}
+		main_instruction();
 	}
 
 	private void pref_testing() {
 		SharedPreferences.Editor editor = settings.edit();  
-		editor.putInt("first", 0);
+		editor.putInt(INST_MODE, 0);
 		// do tutorial
 		editor.commit();
 	}
@@ -162,7 +164,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		main_release_camera(g_preview_layout, g_cam);
 		
 		SharedPreferences.Editor editor = settings.edit();  
-		editor.putInt("first", g_inst_mode);
+		editor.putInt(INST_MODE, g_inst_mode);
 		// do tutorial
 		editor.commit();
 	}
@@ -214,13 +216,13 @@ public class MainActivity extends Activity implements OnTouchListener{
 		case MotionEvent.ACTION_MOVE:
 			double move_down = Math.abs(start.y) - Math.abs(event.getY());
 			
-			// MOVE DOWN: stop preview
+			// MOVE DOWN: stop preview (FREEZE)
 			if( (move_down < -main_move_threshold) && (NORMAL == mode) 
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_frz == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
 				
 				AudioManager mgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-			    mgr.setStreamMute(AudioManager.STREAM_SYSTEM, true);
+			    mgr.setStreamMute(AudioManager.STREAM_SYSTEM, false);
 				g_cam.takePicture(g_shut, g_pic_raw, g_temp_jpeg);
 				//g_cam.stopPreview();
 				mode = FREEZE;
@@ -229,10 +231,10 @@ public class MainActivity extends Activity implements OnTouchListener{
 					g_inst_mode++;
 					main_instruction();
 				}
-				Toast.makeText(this, "Freeze Mirror", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Freeze MirrorMirror", Toast.LENGTH_SHORT).show();
 			}
 			
-			// MOVE DOWN: start preview
+			// MOVE DOWN: start preview ()RESUME
 			else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_rsm == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
@@ -243,33 +245,38 @@ public class MainActivity extends Activity implements OnTouchListener{
 					g_inst_mode++;
 					main_instruction();
 				}
-				Toast.makeText(this, "Resume Mirror", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Resume MirrorMirror", Toast.LENGTH_SHORT).show();
 			}
 			
 			// MOVE UP: normal save picture
 			else if( (move_down > main_move_threshold) && (NORMAL == mode)
 					&& (NO_CHANGE == mode_change)
-					&& ((g_inst_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
+					&& ((g_inst_norm_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
 				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
 				mode_change = CHANGE;
-				if (g_inst_save == g_inst_mode) {
+				if (g_inst_norm_save == g_inst_mode) {
 					g_inst_mode++;
 					main_instruction();
 				}
 			}
 
 			// MOVE UP: freeze save picture
-			else if( (move_down > main_move_threshold) 
-					&& (NO_CHANGE == mode_change) && (FREEZE == mode) ) {
+			else if( (move_down > main_move_threshold) && (FREEZE == mode)
+					&& (NO_CHANGE == mode_change)
+					&& ((g_inst_frz_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
 				try {
 					File dst = main_file_gen();
 					main_cpy_file(temp, dst);
-		            String file_path = dst.getPath();
+		            String file_path = dst.getParent();
 					Toast.makeText(this, "Saved at: " + file_path, Toast.LENGTH_SHORT).show();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 				mode_change = CHANGE;
+				if (g_inst_frz_save == g_inst_mode) {
+					g_inst_mode++;
+					main_instruction();
+				}
 			}
 			
 			break;
@@ -392,30 +399,50 @@ public class MainActivity extends Activity implements OnTouchListener{
 	@SuppressWarnings("deprecation")
 	private void main_instruction() {
 		RelativeLayout lay;
-		
+		ImageView img_lay;
 		switch (g_inst_mode) {
-		case 0:
+		case g_inst_frz:
 			//Toast.makeText(this, "Lets swipe down to freeze the image.", Toast.LENGTH_LONG).show();
 			lay = (RelativeLayout) findViewById(R.id.instruction);
-			((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0xFF);
+			img_lay = (ImageView)findViewById(R.id.inst_arr);
+			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_down1));
 			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Down");
+			
+			img_lay.setAlpha(0xFF);
 			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
 			lay.setVisibility(View.VISIBLE);
 			break;
-		case 1:
-			//Toast.makeText(this, "Lets swipe down again to resume the image.", Toast.LENGTH_LONG).show();
-			lay = (RelativeLayout) findViewById(R.id.instruction);
-			((ImageView)lay.findViewById(R.id.inst_arr)).setAlpha(0xFF);
-			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Down");
-			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
-			lay.setVisibility(View.VISIBLE);
-			break;
-		case 2:
+		case g_inst_frz_save:
 			//Toast.makeText(this, "Finally lets swipe up to save that image.", Toast.LENGTH_LONG).show();
 			lay = (RelativeLayout) findViewById(R.id.instruction);
-			ImageView img_lay = (ImageView)findViewById(R.id.inst_arr);
+			img_lay = (ImageView)findViewById(R.id.inst_arr);
 			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_up1));
 			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Up");
+			
+			img_lay.setAlpha(0xFF);
+			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
+			lay.setVisibility(View.VISIBLE);		
+			break;
+		case g_inst_rsm:
+			//Toast.makeText(this, "Lets swipe down again to resume the image.", Toast.LENGTH_LONG).show();
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			img_lay = (ImageView)findViewById(R.id.inst_arr);
+			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_down1));
+			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Down");
+			
+			img_lay.setAlpha(0xFF);
+			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
+			lay.setVisibility(View.VISIBLE);
+			break;
+		case g_inst_norm_save:
+			//Toast.makeText(this, "Finally lets swipe up to save that image.", Toast.LENGTH_LONG).show();
+			lay = (RelativeLayout) findViewById(R.id.instruction);
+			img_lay = (ImageView)findViewById(R.id.inst_arr);
+			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_up1));
+			((TextView)lay.findViewById(R.id.inst_txt)).setText("Swipe Up");
+			
+			img_lay.setAlpha(0xFF);
 			((TextView)lay.findViewById(R.id.inst_txt)).setTextColor(0xeeff0000);
 			lay.setVisibility(View.VISIBLE);
 
@@ -429,7 +456,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 			img_lay.startAnimation(a);
 			*/			
 			break;
-		case 3:
+		case g_inst_norm:
 			// the instructions were already done. set visibility to gone
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			lay.setVisibility(View.GONE);
@@ -513,6 +540,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	    }
 	}
 	
+	@SuppressLint("SimpleDateFormat")
 	private File main_file_gen() {
 		File imagesFolder = new File(Environment.getExternalStorageDirectory(), "MirrorMirror");
         if( !imagesFolder.exists() ) {

@@ -1,13 +1,11 @@
 package com.toidiu.mirror;
 
 import android.content.Context;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 
 public class Music {
 
 	private MediaPlayer m_mp;
-	private int mp_position;
 	private Context m_ctx;
 	
 	public Music (Context ctx, MediaPlayer mp) {
@@ -37,7 +35,7 @@ public class Music {
 
 	// pause music
 	public void main_pause_music() {
-		mp_position = m_mp.getCurrentPosition();
+		m_mp.getCurrentPosition();
 		m_mp.pause();
 	}
 }
