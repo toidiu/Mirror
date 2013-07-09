@@ -14,6 +14,7 @@ import android.content.pm.PackageManager;
 import android.graphics.PointF;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
+import android.hardware.Camera.PictureCallback;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
@@ -43,8 +44,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private Viewer g_viewer;
 	private MediaPlayer g_mp;
 	private Music g_music = new Music(this, g_mp);
-	private Shutter g_shut;
-	private Pic_raw g_pic_raw;
+	private Shutter g_shut = new Shutter();
+	private Pic_raw g_pic_raw = new Pic_raw();
+	private Pic_jpeg g_pic_jpeg;
 
 	private int g_cam_id;
 	private FrameLayout g_preview_layout;
@@ -58,7 +60,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private int mode;
 	private static final int NORMAL = 0;
 	private static final int FREEZE = 1;
-	private static byte[] g_data;
+	public byte[] g_data;
 	
 	static final int CHANGE = 0;
 	static final int NO_CHANGE = 1;	
@@ -94,10 +96,12 @@ public class MainActivity extends Activity implements OnTouchListener{
 		// set up preferences
 		settings = getSharedPreferences(PREFS_NAME, 0);
 		
+		g_pic_jpeg = new Pic_jpeg(this);
+		
 		pref_testing(); //TODO test code
 		g_inst_mode = settings.getInt("first", 0);	//< first time show the instructions
 		if(g_inst_norm != g_inst_mode) {
-			g_inst_mode = g_inst_norm;
+			g_inst_mode = g_inst_frz; // TODO remove testing code
 			main_instruction();
 		}
 	}
@@ -205,18 +209,15 @@ public class MainActivity extends Activity implements OnTouchListener{
 			if( (move_down < -main_move_threshold) && (NORMAL == mode) 
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_frz == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
-				Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
-				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
-				g_data = g_pic_jpeg.pj_rtn_data();
+				//g_cam.takePicture(g_shut, g_pic_raw, bla);
 				g_cam.stopPreview();
 				mode = FREEZE;
 				mode_change = CHANGE;
 				if (g_inst_frz == g_inst_mode) {
 					g_inst_mode++;
 					main_instruction();
-					Toast.makeText(this, "Freeze Mirror", Toast.LENGTH_SHORT).show();
 				}
-				
+				Toast.makeText(this, "Freeze Mirror", Toast.LENGTH_SHORT).show();
 			} else if ( (move_down < -main_move_threshold) && (FREEZE == mode) 
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_rsm == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
@@ -226,23 +227,25 @@ public class MainActivity extends Activity implements OnTouchListener{
 				if (g_inst_rsm == g_inst_mode) {
 					g_inst_mode++;
 					main_instruction();
-					Toast.makeText(this, "Resume Mirror", Toast.LENGTH_SHORT).show();
 				}
+				Toast.makeText(this, "Resume Mirror", Toast.LENGTH_SHORT).show();
 			}
 			
 			// MOVE UP: resume preview
-			if( (move_down > main_move_threshold) && (NORMAL == mode)
+			else if( (move_down > main_move_threshold) && (NORMAL == mode)
+					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
-				Pic_jpeg g_pic_jpeg = new Pic_jpeg(this);
 				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
-				g_data = g_pic_jpeg.pj_rtn_data();
-				main_save_pic(g_data);
+				mode_change = CHANGE;
 				if (g_inst_save == g_inst_mode) {
 					g_inst_mode++;
 					main_instruction();
 				}
-			} else if( (move_down > main_move_threshold) && (FREEZE == mode) ) {
-				main_save_pic(g_data);
+				Toast.makeText(this, "Normal Save test", Toast.LENGTH_SHORT).show();
+			} else if( (move_down > main_move_threshold) 
+					&& (NO_CHANGE == mode_change) && (FREEZE == mode) ) {
+				mode_change = CHANGE;
+				Toast.makeText(this, "Freeze save test", Toast.LENGTH_SHORT).show();
 			}
 			
 			break;
@@ -252,38 +255,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		}
 		
 		return true;
-	}
-	
-	
-	private void main_save_pic(byte[] data) {
-        FileOutputStream outStream = null;
-        try {
-            // generate the folder
-            File imagesFolder = new File(Environment.getExternalStorageDirectory(), "MirrorMirror");
-            if( !imagesFolder.exists() ) {
-            	imagesFolder.mkdirs();
-            }
-            // generate new image name
-            SimpleDateFormat formatter = new SimpleDateFormat("HH_mm_ss");
-            Date now = new Date();
-            String fileName = "image_" + formatter.format(now) + ".jpg";
-            // create outstream and write data
-            File image = new File(imagesFolder, fileName);
-            outStream = new FileOutputStream(image);
-            outStream.write(data);
-            outStream.close();
-            
-
-            
-            Log.d(TAG, "onPictureTaken - wrote bytes: " + data.length);
-        } catch (FileNotFoundException e) { // <10>
-            //Toast.makeText(ctx, "Exception #2", Toast.LENGTH_LONG).show();
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {}
-        Log.d(TAG, "onPictureTaken - jpeg");
-        Toast.makeText(this, "SAVED", Toast.LENGTH_SHORT).show();
 	}
 
 //*********************************************************************
@@ -439,6 +410,8 @@ public class MainActivity extends Activity implements OnTouchListener{
 			lay.setVisibility(View.GONE);
 			break;
 		default:
+			// stop g_inst_mode from incrementing above 3
+			g_inst_mode = g_inst_norm;
 			break;
 		}
 
