@@ -12,7 +12,9 @@ import java.util.TimerTask;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.PointF;
@@ -68,6 +70,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	static final private int g_inst_norm_save 	= 5;
 	static final private int g_inst_done 		= 6;
 	static final private int g_inst_norm 		= 7;
+	static final private int g_inst_last 		= g_inst_norm;
 
 	private int mode;
 	private static final int NORMAL = 0;
@@ -117,9 +120,10 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		g_inst_mode = settings.getInt(INST_MODE, 0);	//< first time show the instructions
 		
-		g_inst_mode = g_inst_first; // TODO remove testing code
+		//g_inst_mode = g_inst_first; // TODO remove testing code
 		if(g_inst_norm != g_inst_mode) {
-			g_inst_mode = g_inst_first; // TODO remove testing code
+			//start instructions from start if not normal state
+			g_inst_mode = g_inst_first;
 		}
 		main_instruction();
 	}
@@ -162,11 +166,6 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		// release views/camera
 		main_release_camera(g_preview_layout, g_cam);
-		
-		SharedPreferences.Editor editor = settings.edit();  
-		editor.putInt(INST_MODE, g_inst_mode);
-		// do tutorial
-		editor.commit();
 	}
 	
 	@Override
@@ -205,7 +204,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 		main_dump_event(event);
 		
-		switch (event.getAction() /*& MotionEvent.ACTION_MASK*/) {
+		switch (event.getAction() & MotionEvent.ACTION_MASK) {
 		case MotionEvent.ACTION_DOWN:
 			// handle action down
 			start.set(event.getX(), event.getY());
@@ -217,7 +216,19 @@ public class MainActivity extends Activity implements OnTouchListener{
 				main_instruction();
 			}
 			break;
-
+			
+        case MotionEvent.ACTION_POINTER_DOWN:
+            // multitouch!! - touch down
+            int count = event.getPointerCount(); // Number of 'fingers' in this time
+            if(4 == count) {
+            	g_inst_mode = g_inst_first;
+    	        //commit to preferences
+    	        SharedPreferences.Editor editor = settings.edit();  
+    	        editor.putInt(INST_MODE, g_inst_mode);
+    	        editor.commit();
+            }
+            break;
+			
 		case MotionEvent.ACTION_MOVE:
 			double move_down = Math.abs(start.y) - Math.abs(event.getY());
 			
@@ -504,15 +515,15 @@ public class MainActivity extends Activity implements OnTouchListener{
 		case g_inst_done:
 			//Congrats! Look good and Enjoy Mirror Mirror
 			tx.setText("Congrats! You are ready to look good. \nEnjoy Mirror Mirror!");
-			new Handler().postDelayed(new Runnable()
-			{
-			    @Override
-			    public void run()
-			    {
-			    	g_inst_mode++;
-			    	main_instruction();
-			    }
-			}, 4000);
+			
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setMessage("Show tutorial next time?").setPositiveButton("Yes", inst_listener)
+			    .setNegativeButton("No", inst_listener).show();
+			
+			/*new Handler().postDelayed(new Runnable()
+			{@Override public void run(){do stuff}}, 4000);
+			*/
+			
 			break;
 		case g_inst_norm:
 			//remove detail text view
@@ -559,9 +570,35 @@ public class MainActivity extends Activity implements OnTouchListener{
 	}
 	
 //*********************************************************************
+//**********************New Dialog listener       *********************
+//*********************************************************************
+	DialogInterface.OnClickListener inst_listener = new DialogInterface.OnClickListener() {
+	    @Override
+	    public void onClick(DialogInterface dialog, int which) {
+	        switch (which){
+	        case DialogInterface.BUTTON_POSITIVE:
+	            //Yes button clicked
+	        	g_inst_mode = g_inst_first;
+	            break;
+
+	        case DialogInterface.BUTTON_NEGATIVE:
+	            //No button clicked
+	        	g_inst_mode = g_inst_last;
+	            break;
+	        }
+	        //commit to preferences
+	        SharedPreferences.Editor editor = settings.edit();  
+	        editor.putInt(INST_MODE, g_inst_mode);
+	        editor.commit();
+			
+	    	g_inst_mode = g_inst_norm;
+	    	main_instruction();
+	    }
+	};
+
+//*********************************************************************
 //**********************New temp jpeg class       *********************
 //*********************************************************************
-
 	public class temp_jpeg implements PictureCallback {
 		
 		@Override
