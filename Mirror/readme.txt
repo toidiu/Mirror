@@ -1,8 +1,6 @@
 future features
 
 ---------important
-add details to instruction
-
 add aspect ratio correction
 
 ---------additional
@@ -18,6 +16,7 @@ add crop
 add picture effects
 
 ---------done
+add details to instruction
 add picture save while freeze
 add camera freeze
 add picture save
