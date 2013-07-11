@@ -82,15 +82,16 @@
                 android:layout_alignParentTop="true"
                 android:layout_toLeftOf="@id/right_light_frm"
                 android:layout_toRightOf="@id/left_light_frm"
+                android:background="@android:color/black"
                 android:text="test"
                 android:typeface="normal"
                 android:textSize="20sp"
-                android:visibility="gone"
+                android:visibility="visible"
             />
 
 	    <RelativeLayout 
 	        android:id="@+id/instruction"
-            android:visibility="visible"
+            android:visibility="gone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true" >

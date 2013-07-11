@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -18,9 +20,9 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PictureCallback;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
@@ -39,9 +41,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 
 	public Camera g_cam;
 	private Viewer g_viewer;
-	private MediaPlayer g_mp;
-	private Music g_music = new Music(this, g_mp);
-	private Shutter g_shut;
+	//private MediaPlayer g_mp;
+	//private Music g_music = new Music(this, g_mp);
+	//private Shutter g_shut;
 	private Pic_raw g_pic_raw = new Pic_raw();
 	private Pic_jpeg g_pic_jpeg;
 	private temp_jpeg g_temp_jpeg;
@@ -56,11 +58,16 @@ public class MainActivity extends Activity implements OnTouchListener{
 		
 	public static final String INST_MODE = "first";
 	static private int g_inst_mode;
-	static final private int g_inst_frz = 0;
-	static final private int g_inst_frz_save = 1;
-	static final private int g_inst_rsm = 2;
-	static final private int g_inst_norm_save = 3;
-	static final private int g_inst_norm = 4;
+	
+	static final private int g_inst_first	    = 0;
+	static final private int g_inst_welc	    = g_inst_first;
+	static final private int g_inst_welc1 	    = 1;
+	static final private int g_inst_frz 	    = 2;
+	static final private int g_inst_frz_save 	= 3;
+	static final private int g_inst_rsm 		= 4;
+	static final private int g_inst_norm_save 	= 5;
+	static final private int g_inst_done 		= 6;
+	static final private int g_inst_norm 		= 7;
 
 	private int mode;
 	private static final int NORMAL = 0;
@@ -75,7 +82,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 	
 	private PointF start = new PointF();
 	private static final String TAG = "Touch";
-	private final int main_move_threshold = 70;
+	private final int main_move_threshold = 100;
 	
 //*********************************************************************
 //**********************end of global variables   *********************
@@ -99,7 +106,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		// set up preferences
 		settings = getSharedPreferences(PREFS_NAME, 0);
 		
-		g_shut = new Shutter(this);
+		//g_shut = new Shutter(this);
 		g_pic_jpeg = new Pic_jpeg(this);
 		g_temp_jpeg = new temp_jpeg();
 		try {
@@ -108,20 +115,13 @@ public class MainActivity extends Activity implements OnTouchListener{
 			e.printStackTrace();
 		}
 		
-		
-		pref_testing(); //TODO test code
 		g_inst_mode = settings.getInt(INST_MODE, 0);	//< first time show the instructions
+		
+		g_inst_mode = g_inst_first; // TODO remove testing code
 		if(g_inst_norm != g_inst_mode) {
-			g_inst_mode = g_inst_frz; // TODO remove testing code
+			g_inst_mode = g_inst_first; // TODO remove testing code
 		}
 		main_instruction();
-	}
-
-	private void pref_testing() {
-		SharedPreferences.Editor editor = settings.edit();  
-		editor.putInt(INST_MODE, 0);
-		// do tutorial
-		editor.commit();
 	}
 	
 	@Override
@@ -211,6 +211,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 			start.set(event.getX(), event.getY());
 
 			mode_change = NO_CHANGE;
+			
+			if(g_inst_welc == g_inst_mode) {
+				g_inst_mode++;
+				main_instruction();
+			}
 			break;
 
 		case MotionEvent.ACTION_MOVE:
@@ -222,9 +227,20 @@ public class MainActivity extends Activity implements OnTouchListener{
 					&& ((g_inst_frz == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
 				
 				AudioManager mgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-			    mgr.setStreamMute(AudioManager.STREAM_SYSTEM, false);
-				g_cam.takePicture(g_shut, g_pic_raw, g_temp_jpeg);
-				//g_cam.stopPreview();
+			    mgr.setStreamMute(AudioManager.STREAM_SYSTEM, true);
+				g_cam.takePicture(null, g_pic_raw, g_temp_jpeg);
+
+				// mute.. null for shutter seems to work
+				new Handler().postDelayed(new Runnable()
+				{
+				    @Override
+				    public void run()
+				    {
+			    		AudioManager mgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+			    		mgr.setStreamMute(AudioManager.STREAM_SYSTEM, false);
+				    }
+				}, 1000);
+				
 				mode = FREEZE;
 				mode_change = CHANGE;
 				if (g_inst_frz == g_inst_mode) {
@@ -252,7 +268,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 			else if( (move_down > main_move_threshold) && (NORMAL == mode)
 					&& (NO_CHANGE == mode_change)
 					&& ((g_inst_norm_save == g_inst_mode) || (g_inst_norm == g_inst_mode)) ) {
-				g_cam.takePicture(g_shut, g_pic_raw, g_pic_jpeg);
+				g_cam.takePicture(null, g_pic_raw, g_pic_jpeg);
 				mode_change = CHANGE;
 				if (g_inst_norm_save == g_inst_mode) {
 					g_inst_mode++;
@@ -400,9 +416,32 @@ public class MainActivity extends Activity implements OnTouchListener{
 	private void main_instruction() {
 		RelativeLayout lay;
 		ImageView img_lay;
+		TextView tx = ((TextView)findViewById(R.id.detail_inst_txt));
+		
 		switch (g_inst_mode) {
+		case g_inst_welc:
+			//welcome to Mirror Mirror! The app that tells no lies.
+			//press to continue..
+			tx.setText("Welcome to Mirror Mirror! The App that tells no lies.");
+			tx.append("\n\nclick to continue..");
+			break;
+		case g_inst_welc1:
+			//Lets explore the different features of MirrorMirror
+			tx.setText("Lets explore the different features of MirrorMirror..");
+			new Handler().postDelayed(new Runnable()
+			{
+			    @Override
+			    public void run()
+			    {
+			    	g_inst_mode++;
+			    	main_instruction();
+			    }
+			}, 2000);
+			break;
 		case g_inst_frz:
-			//Toast.makeText(this, "Lets swipe down to freeze the image.", Toast.LENGTH_LONG).show();
+			//Just follow the instructions on the screen
+			tx.append("\n\nJust follow the instructions on the screen.");
+			
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			img_lay = (ImageView)findViewById(R.id.inst_arr);
 			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_down1));
@@ -413,7 +452,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 			lay.setVisibility(View.VISIBLE);
 			break;
 		case g_inst_frz_save:
-			//Toast.makeText(this, "Finally lets swipe up to save that image.", Toast.LENGTH_LONG).show();
+			//Great! Now lets save that image.
+			tx.setText("Great! \nYou froze Mirror Mirror. Now lets save that reflection.");
+			
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			img_lay = (ImageView)findViewById(R.id.inst_arr);
 			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_up1));
@@ -424,7 +465,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 			lay.setVisibility(View.VISIBLE);		
 			break;
 		case g_inst_rsm:
-			//Toast.makeText(this, "Lets swipe down again to resume the image.", Toast.LENGTH_LONG).show();
+			//You are a natural! Lets start the camera again.
+			tx.setText("Lets take a different picture. \n First you have to restart Mirror Mirror.");
+			
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			img_lay = (ImageView)findViewById(R.id.inst_arr);
@@ -436,7 +479,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 			lay.setVisibility(View.VISIBLE);
 			break;
 		case g_inst_norm_save:
-			//Toast.makeText(this, "Finally lets swipe up to save that image.", Toast.LENGTH_LONG).show();
+			//Lets take one more picture for old times.
+			tx.setText("Now save the reflection on Mirror Mirror.");
+			
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			img_lay = (ImageView)findViewById(R.id.inst_arr);
 			img_lay.setImageDrawable(getResources().getDrawable(R.drawable.arrow_up1));
@@ -456,13 +501,29 @@ public class MainActivity extends Activity implements OnTouchListener{
 			img_lay.startAnimation(a);
 			*/			
 			break;
+		case g_inst_done:
+			//Congrats! Look good and Enjoy Mirror Mirror
+			tx.setText("Congrats! You are ready to look good. \nEnjoy Mirror Mirror!");
+			new Handler().postDelayed(new Runnable()
+			{
+			    @Override
+			    public void run()
+			    {
+			    	g_inst_mode++;
+			    	main_instruction();
+			    }
+			}, 4000);
+			break;
 		case g_inst_norm:
+			//remove detail text view
+			tx.setVisibility(View.GONE);
+			
 			// the instructions were already done. set visibility to gone
 			lay = (RelativeLayout) findViewById(R.id.instruction);
 			lay.setVisibility(View.GONE);
 			break;
 		default:
-			// stop g_inst_mode from incrementing above 3
+			// stop g_inst_mode from incrementing more
 			g_inst_mode = g_inst_norm;
 			break;
 		}
