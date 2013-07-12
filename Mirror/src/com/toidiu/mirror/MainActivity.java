@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+
+import com.toidiu.mirror.R.layout;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -26,6 +29,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -100,6 +104,9 @@ public class MainActivity extends Activity implements OnTouchListener{
 		mode_change = NO_CHANGE;
 		// show the instructions everytime on default
 		g_inst_mode = 0;
+		
+		//
+		main_aspect_ratio();
 		
 		// set up touch listeners
 		main_touch_listener();
@@ -409,9 +416,31 @@ public class MainActivity extends Activity implements OnTouchListener{
 
 	}
 
+	//
+	private void main_aspect_ratio() {
+		FrameLayout cam_view = (FrameLayout) findViewById(R.id.camera_preview);
+		Camera.Parameters param = g_cam.getParameters();
+        List<Camera.Size> previewSizes = param.getSupportedPreviewSizes();
+        Camera.Size previewSize = previewSizes.get(0);
+        int w = previewSize.width;
+        int h = previewSize.height;
+
+
+        Display display = getWindowManager().getDefaultDisplay();
+        int width = display.getWidth();
+        double ratio = ((float) (width))/300.0;
+        int height = (int)(ratio*50);
+        
+        
+        cam_view.setLayoutParams(new FrameLayout.LayoutParams(LayoutParams.FILL_PARENT,height));
+        cam_view.setAdListener(this);
+        layout.addView(cam_view);
+	}
+	
+	
 	// enable gesture and gesture listeners
 	private void main_touch_listener() {
-		View cam_view = findViewById(R.id.cam_frame);
+		View cam_view = findViewById(R.id.mid_frame);
 		cam_view.setOnTouchListener(this);
 	}
 	
@@ -431,6 +460,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		case g_inst_welc:
 			//welcome to Mirror Mirror! The app that tells no lies.
 			//press to continue..
+			tx.setVisibility(View.VISIBLE);
 			tx.setText("Welcome to Mirror Mirror! The App that tells no lies.");
 			tx.append("\n\nclick to continue..");
 			break;
