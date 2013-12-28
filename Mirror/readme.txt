@@ -7,6 +7,7 @@ add aspect ratio correction
 add saturation
 expand camera view to entire screen behind frame
 add frame
+rate app
 
 black overlay while instructions
 
@@ -14,6 +15,11 @@ add zoom
 add crop
 
 add picture effects
+
+tools:
+google guice
+bugsense
+flurry
 
 ---------done
 add details to instruction

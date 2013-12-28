@@ -1,7 +1,11 @@
 # built application files
 *.apk
 *.ap_
-Mirror/bin/*
+Mirror/bin/*.apk
+Mirror/bin/*.ap_
+Mirror/bin/*.cache
+
+
 
 # files for the dex VM
 *.dex
