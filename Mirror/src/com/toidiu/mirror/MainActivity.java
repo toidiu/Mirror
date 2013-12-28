@@ -34,6 +34,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -106,7 +107,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 		g_inst_mode = 0;
 		
 		//
-		main_aspect_ratio();
+//		main_aspect_ratio();
 		
 		// set up touch listeners
 		main_touch_listener();
@@ -432,9 +433,9 @@ public class MainActivity extends Activity implements OnTouchListener{
         int height = (int)(ratio*50);
         
         
-        cam_view.setLayoutParams(new FrameLayout.LayoutParams(LayoutParams.FILL_PARENT,height));
-        cam_view.setAdListener(this);
-        layout.addView(cam_view);
+//        cam_view.setLayoutParams(new FrameLayout.LayoutParams(LayoutParams.FILL_PARENT,height));
+//        cam_view.setAdListener(this);
+//        layout.addView(cam_view);
 	}
 	
 	
