@@ -148,7 +148,11 @@ public class MainActivity extends Activity implements OnTouchListener{
 		g_preview_layout = (FrameLayout) findViewById(R.id.camera_preview);
 		g_preview_layout.removeAllViews();
 
+		// starts camera preview
 		main_start_camera_layout(g_preview_layout, g_cam_id);
+		
+		// set brightness
+		main_set_brightness();
 		
 		// start music
 		setVolumeControlStream(AudioManager.STREAM_MUSIC);
@@ -347,7 +351,7 @@ public class MainActivity extends Activity implements OnTouchListener{
 			CameraInfo info = new CameraInfo();
 			Camera.getCameraInfo(cam_id, info);
 			if (CameraInfo.CAMERA_FACING_FRONT == info.facing) {
-				main_set_brightness();
+//				main_set_brightness();
 				break;
 			}
 		}
